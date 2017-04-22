@@ -1,0 +1,152 @@
+<html><head></head><body><div class="apidocDiv">
+<style>
+/*csslint
+*/
+.apidocDiv {
+    background: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+}
+.apidocDiv a[href] {
+    color: #33f;
+    font-weight: bold;
+    text-decoration: none;
+}
+.apidocDiv a[href]:hover {
+    text-decoration: underline;
+}
+.apidocCodeCommentSpan {
+    background: #bbf;
+    color: #000;
+    display: block;
+}
+.apidocCodeKeywordSpan {
+    color: #d00;
+    font-weight: bold;
+}
+.apidocCodePre {
+    background: #eef;
+    border: 1px solid;
+    color: #777;
+    padding: 5px;
+    white-space: pre-wrap;
+}
+.apidocFooterDiv {
+    margin-top: 20px;
+    text-align: center;
+}
+.apidocModuleLi {
+    margin-top: 10px;
+}
+.apidocSectionDiv {
+    border-top: 1px solid;
+    margin-top: 20px;
+}
+.apidocSignatureSpan {
+    color: #777;
+    font-weight: bold;
+}
+</style>
+<h1>api documentation for
+    <a href="https://github.com/brandonhorst/node-osa">osa (v2.5.0)</a>
+</h1>
+<h4>node.js module for interfacing with OSX 10.10 Javascript OSA Scripting</h4>
+<div class="apidocSectionDiv"><a href="#apidoc.tableOfContents" id="apidoc.tableOfContents"><h1>table of contents</h1></a><ol>
+
+    <li class="apidocModuleLi"><a href="#apidoc.module.osa">module osa</a><ol>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.osa.osa">
+            function <span class="apidocSignatureSpan"></span>osa
+            <span class="apidocSignatureSpan">(osaFunction)</span>
+            </a>
+
+        </li>
+
+    </ol></li>
+
+</ol></div>
+
+<div class="apidocSectionDiv">
+<h1><a href="#apidoc.module.osa" id="apidoc.module.osa">module osa</a></h1>
+
+
+    <h2>
+        <a href="#apidoc.element.osa.osa" id="apidoc.element.osa.osa">
+        function <span class="apidocSignatureSpan"></span>osa
+        <span class="apidocSignatureSpan">(osaFunction)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">function osa(osaFunction) {
+  // get an array of arguments, excluding the osaFunction and the callback
+
+  var args = Array.prototype.slice.call(arguments, 1, arguments.length - 1);
+
+  // get a reference to the callback
+  var done = arguments.length &gt; 1
+    ? arguments[arguments.length - 1]
+    : null;
+
+  // conver these args to json
+  var jsonArgs = args.map(JSON.stringify);
+
+  // build a string to call osaFunction, pass in args, and evaulate to
+  // the JSON representation of the return value, then call it with osascript
+  var consoleLogPatch = 'var old = console.log; console.log = function () { Array.prototype.unshift.call(arguments, "' +
+    consoleLogPrefix + '"); Array.prototype.push.call(arguments, "' + consoleLogSuffix +
+    '"); old.apply(console, arguments); }; ';
+  var functionCallString = consoleLogPatch + 'JSON.stringify((' + osaFunction.toString() + ')(' + jsonArgs.join(',') + '));';
+
+  // Use multiple -e options to allow line-specific error reporting in osaFunction.
+  // Reported error lines start counting at 1 for the function call, i.e. an error in line 2
+  // refers to the first line of code inside the function.
+  var escapedCall = functionCallString.replace(/^\s+/g, ' ').replace(/'/g, "'\\''").split('\n');
+  var executeString = 'osascript -l JavaScript';
+  for (var r = 0; r &lt; escapedCall.length; r++) {
+    executeString += " -e '" + escapedCall[r] + "'";
+  }
+
+  exec(executeString, {maxBuffer: 1024 * 1024}, function (err, stdout, stderr) {
+    if (!done) {
+      return;
+    }
+
+    var result, newErr;
+
+    var log = extractLogs(stderr);
+
+    // if an error was thrown, it will go into err - just pass it through
+    if (err) {
+      done(err);
+
+    // if no error was thrown, anything returned will be in stdout
+    } else {
+      try {
+        if (stdout.trim() === '') {
+          done(null, undefined, log);
+        } else {
+          result = JSON.parse(stdout);
+          done(null, result, log);
+        }
+      // if nothing was in stdout (or it wasn't JSON), something went wrong
+      } catch (e) {
+        newErr = new Error('Function did not return an object: ' + e.message);
+        done(newErr);
+      }
+    }
+  });
+}</pre></li>
+    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    </ul>
+
+
+</div>
+
+<div class="apidocFooterDiv">
+    [ this document was created with
+    <a href="https://github.com/kaizhu256/node-utility2" target="_blank">utility2</a>
+    ]
+</div>
+</div>
+</body></html>
